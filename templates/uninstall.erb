@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/sbin/lpadmin -x <%= settings['name'] %>
+rm -f /private/etc/cups/deployment/receipts/<%= settings['name'] %>.plist

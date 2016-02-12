@@ -1,0 +1,11 @@
+---
+
+version: 1.1
+address: "lpd://10.0.0.240"
+name: inkwaster_pro_3000n
+displayname: "InkWaster Pro 3000n"
+description: "Multifunction device in Bob's office"
+ppd: /Library/Printers/PPDs/Contents/Resources/IWP300n.ppd
+options:
+   - "Duplex=true"
+   - "InksavingMode=false"

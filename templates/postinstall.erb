@@ -1,0 +1,57 @@
+#!/bin/sh
+
+# Based on 2010 Walter Meyer SUNY Purchase College (c)
+# Modified by Nick McSpadden, 2013
+# Modified by Zack Williams, 2015
+
+### Determine if receipt is installed ###
+if [ -e /private/etc/cups/deployment/receipts/<%= settings['name'] %>.plist ]; then
+        storedVersion=`/usr/libexec/PlistBuddy -c "Print :version" /private/etc/cups/deployment/receipts/<%= settings['name'] %>.plist`
+        echo "Stored version: $storedVersion"
+else
+        storedVersion="0"
+fi
+
+versionComparison=`echo "$storedVersion < <%= settings['version'] %>" | bc -l`
+# This will be 0 if the current receipt is greater than or equal to current version of the script
+
+### Printer Install ###
+# If the queue already exists (returns 0), we don't need to reinstall it.
+/usr/bin/lpstat -p <%= settings['name'] %>
+if [ $? -eq 0 ]; then
+        if [ $versionComparison == 0 ]; then
+                # We are at the current or greater version
+                exit 1
+        fi
+    # We are of lesser version, and therefore we should delete the printer and reinstall.
+    /usr/sbin/lpadmin -x <%= settings['name'] %>
+fi
+
+# Now we can install the printer.
+/usr/sbin/lpadmin \
+        -p "<%= settings['name'] %>" \
+        -L "<%= settings['location'] %>" \
+        -D "<%= settings['displayname'] %>" \
+        -v "<%= settings['address'] %>" \
+        -P "<%= settings['ppd'] %>" \
+<% unless settings["options"].nil? %>
+<% settings["options"].each do |option| %>
+        -o "<%= option %>" \
+<% end %>
+<% end %>
+        -o printer-is-shared=false \
+        -o printer-error-policy=abort-job \
+        -E
+# Enable and start the printers on the system (after adding the printer initially it is paused).
+/usr/sbin/cupsenable $(lpstat -p | grep -w "printer" | awk '{print$2}')
+
+# Create a receipt for the printer
+mkdir -p /private/etc/cups/deployment/receipts
+/usr/libexec/PlistBuddy -c "Add :version string" /private/etc/cups/deployment/receipts/<%= settings['name'] %>.plist
+/usr/libexec/PlistBuddy -c "Set :version <%= settings['version'] %>" /private/etc/cups/deployment/receipts/<%= settings['name'] %>.plist
+
+# Permission the directories properly.
+chown -R root:_lp /private/etc/cups/deployment
+chmod -R 700 /private/etc/cups/deployment
+
+exit 0
